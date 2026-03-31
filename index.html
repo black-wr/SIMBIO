@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIMBIO - Biodata Lengkap</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        .bg-login { background: linear-gradient(135deg, #38bdf8, #2563eb); min-height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+        .bg-dashboard { background: #f3f4f6; min-height: 100vh; }
+        #particles-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        
+        .card { background: white; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; position: relative; z-index: 10;}
+        .login-card { max-width: 400px; padding: 30px; margin: auto; }
+        .form-card { max-width: 900px; padding: 30px; margin: 20px auto; }
+        
+        .main-title { color: #0ea5e9; text-align: center; font-size: 24px; margin-bottom: 20px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+        .form-input, .form-select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: #f9fafb; }
+        
+        .btn { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; }
+        .btn-blue { background: #0ea5e9; } .btn-blue:hover { background: #0284c7; }
+        .btn-green { background: #10b981; } .btn-red { background: #ef4444; } .btn-gray { background: #6b7280; }
+        .btn-outline { background: transparent; border: 1px solid #0ea5e9; color: #0ea5e9; }
+        
+        .signature-wrapper { display: flex; flex-direction: column; align-items: center; background:#f9fafb; padding:15px; border-radius:8px; border: 1px solid #d1d5db; }
+        .signature-pad { border: 1px dashed #9ca3af; background: #fff; cursor: crosshair; width: 100%; max-width: 450px; height: 150px; touch-action: none; }
+        
+        /* Dashboard & Event Cards */
+        .dashboard { display: flex; min-height: 100vh; }
+        .sidebar { width: 250px; background: #1e293b; color: white; padding: 20px; }
+        .sidebar li { padding: 12px; margin-bottom: 5px; cursor: pointer; border-radius: 5px; transition: 0.2s;}
+        .sidebar li:hover, .sidebar li.active { background: #38bdf8; }
+        .content { flex: 1; padding: 30px; overflow-y: auto; position: relative; }
+        
+        .event-card { background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .event-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); border-color: #0ea5e9; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; background: white; }
+        th, td { border: 1px solid #e5e7eb; padding: 10px; text-align: left; }
+        th { background: #f3f4f6; }
+        
+        .hidden { display: none !important; }
+        
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; display: flex; justify-content: center; align-items: center; flex-direction: column; color: white; }
+        .progress-bar-container { width: 300px; height: 15px; background: #374151; border-radius: 10px; overflow: hidden; margin-top: 15px; }
+        .progress-bar { height: 100%; width: 0%; background: #0ea5e9; transition: width 0.3s; }
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #323639; z-index: 1000; display: flex; flex-direction: column; align-items: center; }
+        .modal-toolbar { background: #202124; width: 100%; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .iframe-container { width: 100%; flex: 1; overflow: hidden; display: flex; justify-content: center; padding: 20px 0; }
+        #previewFrame { width: 90%; max-width: 1000px; height: 100%; background: #525659; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body id="appBody" class="bg-dashboard">
+
+    <canvas id="particles-canvas" class="hidden"></canvas>
+
+    <div id="loadingScreen" class="loading-overlay hidden">
+        <h2 id="loadingText">Memproses...</h2>
+        <div class="progress-bar-container"><div id="progressFill" class="progress-bar"></div></div>
+        <p id="progressPerc" style="margin-top:10px; font-weight:bold;">0%</p>
+    </div>
+
+    <div id="view-nav" style="padding: 15px 30px; background: white; box-shadow: 0 1px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; position:relative; z-index:10;">
+        <h3 style="color:#0ea5e9;">SIMBIO</h3>
+        <button id="btnNavLogin" class="btn btn-blue" onclick="switchView('login')">Login Admin/Panitia</button>
+    </div>
+
+    <div id="view-form" class="card form-card">
+        <h2 class="main-title">Formulir Biodata Kegiatan</h2>
+        <div style="text-align:center; margin-bottom: 20px;">
+            <label><input type="radio" name="jnsForm" id="rPeserta" value="Peserta" checked onchange="toggleForm()"> Peserta</label>
+            <label style="margin-left: 20px;"><input type="radio" name="jnsForm" id="rPanitia" value="Panitia" onchange="toggleForm()"> Panitia</label>
+        </div>
+
+        <form id="bioForm" onsubmit="submitForm(event)">
+            <input type="hidden" id="editRowData">
+            
+            <div class="form-group"><label class="form-label">Pilih Nama Kegiatan</label>
+                <select id="fNamaKeg" class="form-select" required><option value="">-- Sedang Memuat Kegiatan --</option></select>
+            </div>
+            
+            <div id="wrapSurat" class="form-group hidden"><label class="form-label">Nomor Surat Tugas</label><input type="text" id="fSurat" class="form-input"></div>
+            
+            <div class="grid-2">
+                <div class="form-group"><label class="form-label">Nama Lengkap</label><input type="text" id="fNama" class="form-input" required></div>
+                <div class="form-group"><label class="form-label">NIP</label><input type="text" id="fNip" class="form-input"></div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label class="form-label">Jabatan</label><input type="text" id="fJabatan" class="form-input" required></div>
+                <div class="form-group"><label class="form-label">Pangkat/Golongan</label>
+                    <select id="fGol" class="form-select">
+                        <option value="">Pilih</option><option value="Juru Muda - I/a">Juru Muda - I/a</option><option value="Juru Muda Tk. I - I/b">Juru Muda Tk. I - I/b</option><option value="Juru - I/c">Juru - I/c</option><option value="Juru Tk. I - I/d">Juru Tk. I - I/d</option><option value="Pengatur Muda - II/a">Pengatur Muda - II/a</option><option value="Pengatur Muda Tk. I - II/b">Pengatur Muda Tk. I - II/b</option><option value="Pengatur - II/c">Pengatur - II/c</option><option value="Pengatur Tk. I - II/d">Pengatur Tk. I - II/d</option><option value="Penata Muda - III/a">Penata Muda - III/a</option><option value="Penata Muda Tk. I - III/b">Penata Muda Tk. I - III/b</option><option value="Penata - III/c">Penata - III/c</option><option value="Penata Tk. I - III/d">Penata Tk. I - III/d</option><option value="Pembina - IV/a">Pembina - IV/a</option><option value="Pembina Tk. I - IV/b">Pembina Tk. I - IV/b</option><option value="Pembina Utama Muda - IV/c">Pembina Utama Muda - IV/c</option><option value="Pembina Utama Madya - IV/d">Pembina Utama Madya - IV/d</option><option value="Pembina Utama - IV/e">Pembina Utama - IV/e</option><option value="Lainnya / Non ASN">Lainnya / Non ASN</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group"><label class="form-label">Tempat Lahir</label><input type="text" id="fTptLahir" class="form-input" required></div>
+                <div class="form-group"><label class="form-label">Tanggal Lahir</label><input type="date" id="fTglLahir" class="form-input" required></div>
+            </div>
+            <div class="form-group"><label class="form-label">Instansi</label><input type="text" id="fInstansi" class="form-input" required></div>
+            <div class="grid-3">
+                <div class="form-group"><label class="form-label">Detail Alamat Rumah</label><input type="text" id="fJalanR" class="form-input" placeholder="Jalan/RT/RW"></div>
+                <div class="form-group"><label class="form-label">Provinsi Rumah</label><select id="fProvR" class="form-select" onchange="loadKab('fProvR','fKabR')"><option value="">Pilih</option><option value="Papua Barat">Papua Barat</option><option value="Papua Barat Daya">Papua Barat Daya</option></select></div>
+                <div class="form-group"><label class="form-label">Kab/Kota Rumah</label><select id="fKabR" class="form-select"></select></div>
+            </div>
+            <div class="grid-3">
+                <div class="form-group"><label class="form-label">Detail Alamat Instansi</label><input type="text" id="fJalanI" class="form-input" placeholder="Jalan/RT/RW"></div>
+                <div class="form-group"><label class="form-label">Provinsi Instansi</label><select id="fProvI" class="form-select" onchange="loadKab('fProvI','fKabI')"><option value="">Pilih</option><option value="Papua Barat">Papua Barat</option><option value="Papua Barat Daya">Papua Barat Daya</option></select></div>
+                <div class="form-group"><label class="form-label">Kab/Kota Instansi</label><select id="fKabI" class="form-select"></select></div>
+            </div>
+            <div class="grid-3">
+                <div class="form-group"><label class="form-label">Pendidikan Terakhir</label><select id="fPend" class="form-select"><option value="SMA/SMK">SMA/SMK</option><option value="D1/D2/D3">D1/D2/D3</option><option value="D4/S1">D4/S1</option><option value="S2">S2</option><option value="S3">S3</option></select></div>
+                <div class="form-group"><label class="form-label">No HP</label><input type="text" id="fHp" class="form-input" required></div>
+                <div class="form-group"><label class="form-label">Email</label><input type="email" id="fEmail" class="form-input" required></div>
+            </div>
+            <div class="form-group"><label class="form-label">NPWP</label><input type="text" id="fNpwp" class="form-input"></div>
+            <div class="grid-2" style="background:#f0f9ff; padding:15px; border-radius:6px; margin-bottom:15px;">
+                <div class="form-group"><label class="form-label">Tempat Kegiatan</label><input type="text" id="fTptKeg" class="form-input" required></div>
+                <div class="form-group"><label class="form-label">Tanggal Kegiatan</label><input type="date" id="fTglKeg" class="form-input" required></div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tanda Tangan Digital</label>
+                <div class="signature-wrapper">
+                    <canvas id="pad" class="signature-pad" width="450" height="150"></canvas>
+                    <button type="button" class="btn btn-gray" style="font-size:11px; padding:5px 15px; margin-top:10px;" onclick="ctx.clearRect(0,0,pad.width,pad.height)">Hapus / Ulangi TTD</button>
+                </div>
+            </div>
+            <button type="submit" id="btnKirim" class="btn btn-blue" style="width:100%; padding:15px; font-size:16px;">KIRIM BIODATA</button>
+            <button type="button" id="btnBatalEdit" class="btn btn-red hidden" style="width:100%; padding:10px; margin-top:10px;" onclick="batalEdit()">Batal Edit (Kembali ke Dashboard)</button>
+        </form>
+    </div>
+
+    <div id="view-login" class="hidden">
+        <div class="card login-card">
+            <div style="text-align:center; margin-bottom: 20px;">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/9/9c/Logo_of_Ministry_of_Education_and_Culture_of_Republic_of_Indonesia.svg" alt="Logo" width="80">
+                <h2 style="color:#0ea5e9; margin-top:10px;">SIMBIO Login</h2>
+            </div>
+            <form onsubmit="doLogin(event)">
+                <div class="form-group"><label class="form-label">Username</label><input type="text" id="logUser" class="form-input" required></div>
+                <div class="form-group"><label class="form-label">Password</label><input type="password" id="logPass" class="form-input" required></div>
+                <button type="submit" id="btnLogin" class="btn btn-blue" style="width:100%;">MASUK</button>
+                <div style="text-align:center; margin-top:15px;"><a href="#" onclick="switchView('form')" style="font-size:13px; color:#6b7280;">Kembali ke Formulir</a></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="view-dash" class="dashboard hidden" style="position:relative; z-index:10;">
+        <div class="sidebar">
+            <h3 style="margin-bottom:5px;">Dashboard</h3>
+            <p id="lblRole" style="font-size:12px; color:#9ca3af; margin-bottom:20px;"></p>
+            <ul style="list-style:none;">
+                <li onclick="showMenu('data')">Data Peserta & Panitia</li>
+                <li id="menuKegiatanLi" onclick="showMenu('kegiatan')">Data Kegiatan</li>
+                <li id="menuUserLi" onclick="showMenu('users')">Kelola User</li>
+                <li onclick="showMenu('pengaturan')">Pengaturan Halaman</li>
+                <li onclick="doLogout()" style="color:#fca5a5; margin-top:20px;">Logout</li>
+            </ul>
+        </div>
+        <div class="content">
+            
+            <div id="menu-data">
+                <h2>Klasifikasi Data Peserta & Panitia</h2>
+                
+                <div id="view-event-list" style="margin-top:20px;">
+                    <p style="color:#6b7280; margin-bottom:15px;">Pilih kegiatan di bawah ini untuk melihat data Peserta dan Panitia.</p>
+                    <div id="eventCards" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;"></div>
+                </div>
+
+                <div id="view-event-detail" class="hidden" style="margin-top:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <button class="btn btn-outline" onclick="backToEvents()">← Kembali</button>
+                        <input type="text" id="searchData" class="form-input" placeholder="Cari Nama/NIP/Instansi..." style="width:300px;" onkeyup="filterTabelData()">
+                    </div>
+                    <h3 id="detailTitle" style="color:#374151; margin-bottom:15px;"></h3>
+                    
+                    <div style="margin-bottom: 15px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">
+                        <button id="btnTabPeserta" class="btn btn-blue" onclick="switchDataTab('Peserta')">Data Peserta</button>
+                        <button id="btnTabPanitia" class="btn btn-gray" onclick="switchDataTab('Panitia')" style="margin-left:10px;">Data Panitia</button>
+                    </div>
+
+                    <div id="tableData" style="overflow-x:auto;"></div>
+                </div>
+            </div>
+
+            <div id="menu-kegiatan" class="hidden">
+                <h2>Master Data Kegiatan</h2>
+                <div class="card" style="padding:20px; margin-top:15px;">
+                    <input type="hidden" id="kEditRow">
+                    <div class="grid-3">
+                        <div class="form-group"><label class="form-label">Nama Kegiatan</label><input type="text" id="kNama" class="form-input"></div>
+                        <div class="form-group"><label class="form-label">Tanggal Mulai</label><input type="date" id="kMulai" class="form-input"></div>
+                        <div class="form-group"><label class="form-label">Tanggal Selesai</label><input type="date" id="kSelesai" class="form-input"></div>
+                    </div>
+                    <label style="font-size:13px; font-weight:bold; color:#d97706; display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" id="kFootnote"> Jadikan Nama & Tanggal Kegiatan ini sebagai Footnote saat Cetak
+                    </label>
+                    <div style="margin-top:15px;">
+                        <button class="btn btn-green" onclick="simpanKeg()">Simpan Kegiatan</button>
+                        <button class="btn btn-gray hidden" id="kBatal" onclick="batalEditKeg()">Batal Edit</button>
+                    </div>
+                </div>
+                <div id="tableKegiatan" style="margin-top:20px;"></div>
+            </div>
+
+            <div id="menu-users" class="hidden">
+                <h2>Kelola User</h2>
+                <div class="card" style="padding:20px; margin-top:15px;">
+                    <input type="hidden" id="uEditRow">
+                    <div class="grid-3"><input type="text" id="uName" class="form-input" placeholder="Username"><input type="text" id="uPass" class="form-input" placeholder="Password"><select id="uRole" class="form-select"><option value="Admin">Admin</option><option value="Panitia">Panitia</option></select></div>
+                    <button class="btn btn-green" onclick="simpanUser()" style="margin-top:10px;">Simpan User</button>
+                    <button class="btn btn-gray hidden" id="uBatal" onclick="batalEditUser()" style="margin-top:10px;">Batal Edit</button>
+                </div>
+                <div id="tableUsers" style="margin-top:20px;"></div>
+            </div>
+
+            <div id="menu-pengaturan" class="hidden">
+                <h2>Pengaturan Halaman Cetak</h2>
+                <div class="card grid-2" style="padding:20px; margin-top:15px; background:white;">
+                    <div class="form-group"><label class="form-label">Teks Kop</label><input type="text" id="pTxt" class="form-input"></div>
+                    <div class="form-group"><label class="form-label">Upload Gambar Kop (Kualitas Tinggi)</label>
+                        <input type="file" id="pImgFile" class="form-input" accept="image/*">
+                        <input type="hidden" id="pImg64"><small id="imgStatus" style="color:green; font-size:11px;"></small>
+                    </div>
+                    <div class="form-group"><label class="form-label">Jenis Huruf (Font)</label><select id="pFont" class="form-select"><option value="Arial">Arial</option><option value="Times New Roman">Times New Roman</option><option value="Calibri">Calibri</option><option value="Tahoma">Tahoma</option><option value="Verdana">Verdana</option></select></div>
+                    <div class="form-group"><label class="form-label">Ukuran Huruf</label><select id="pSize" class="form-select"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt (Standar)</option><option value="13">13 pt</option><option value="14">14 pt</option></select></div>
+                    
+                    <div class="form-group"><label class="form-label">Jarak Paragraf (Spasi Tabel)</label>
+                        <select id="pSpasi" class="form-select"><option value="1">1.0 (Single)</option><option value="1.15">1.15</option><option value="1.5">1.5</option><option value="2">2.0 (Double)</option></select>
+                    </div>
+
+                    <div class="form-group"><label class="form-label">Margin Dokumen</label><select id="pMargin" class="form-select"><option value="1.5cm">Sempit (1.5 cm)</option><option value="2cm">Normal (2 cm)</option><option value="2.54cm">Moderat (2.54 cm)</option><option value="3cm">Lebar (3 cm)</option></select></div>
+                    <div class="form-group"><label class="form-label">Ukuran Kertas</label><select id="pKertas" class="form-select"><option value="A4">A4 (21 x 29.7 cm)</option><option value="F4">F4 / Folio (21.5 x 33 cm)</option><option value="Letter">Letter</option><option value="Legal">Legal</option></select></div>
+                    <div class="form-group"><label class="form-label">Gaya Huruf</label><div style="margin-top:5px;"><label><input type="checkbox" id="pBold"> Cetak Tebal</label> <label style="margin-left:15px;"><input type="checkbox" id="pItalic"> Cetak Miring</label></div></div>
+                    <div class="form-group"><label class="form-label">Jarak (Kop->Judul) & (Judul->Isian) dlm pixel</label><div style="display:flex; gap:10px;"><input type="number" id="pJarak1" class="form-input" value="20"><input type="number" id="pJarak2" class="form-input" value="20"></div></div>
+                    <div class="form-group" style="grid-column: span 2;"><label class="form-label">Footnote Default (Bisa ditimpa oleh Kegiatan)</label><input type="text" id="pFoot" class="form-input"></div>
+                    <button class="btn btn-green" onclick="simpanPengaturan()" style="grid-column: span 2;">Simpan Pengaturan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalCetak" class="modal hidden">
+        <div class="modal-toolbar">
+            <h3 style="margin:0;">Pratinjau Dokumen Cetak</h3>
+            <div>
+                <button class="btn btn-blue" onclick="document.getElementById('previewFrame').contentWindow.print()">🖨️ Cetak Dokumen</button>
+                <button class="btn btn-red" onclick="document.getElementById('modalCetak').classList.add('hidden')" style="margin-left:10px;">Tutup</button>
+            </div>
+        </div>
+        <div class="iframe-container"><iframe id="previewFrame"></iframe></div>
+    </div>
+
+    <script>
+        // MASUKKAN LINK WEB APP (EXEC) ANDA DI SINI
+        const API_URL = 'https://script.google.com/macros/s/AKfycbw7EbHa5GIgjCL6cHgiqjC7wXy-SCITIgWTjdKddyoOHtKZJxHfos9wp-jlotZlKn8P/exec';
+
+        let gRole = '', gDataAll = {peserta:[], panitia:[], kegiatan:[]}, gUsers = [], gSet = {};
+        let currentEvent = '';
+        let currentDataTab = 'Peserta'; // Menyimpan state tab di dalam event detail
+
+        const wil = { "Papua Barat": ["Manokwari", "Fakfak", "Kaimana", "Teluk Bintuni", "Teluk Wondama", "Manokwari Selatan", "Pegunungan Arfak"], "Papua Barat Daya": ["Kota Sorong", "Kab Sorong", "Sorong Selatan", "Raja Ampat", "Tambrauw", "Maybrat"] };
+
+        // SISTEM LOADING
+        let loadInterval;
+        function showLoad(msg) {
+            document.getElementById('loadingScreen').classList.remove('hidden'); document.getElementById('loadingText').innerText = msg;
+            let p = 0; document.getElementById('progressFill').style.width = '0%'; document.getElementById('progressPerc').innerText = '0%';
+            loadInterval = setInterval(() => { if(p < 90) { p += Math.floor(Math.random() * 15); document.getElementById('progressFill').style.width = p+'%'; document.getElementById('progressPerc').innerText = p+'%'; } }, 200);
+        }
+        function hideLoad() {
+            clearInterval(loadInterval); document.getElementById('progressFill').style.width = '100%'; document.getElementById('progressPerc').innerText = '100%';
+            setTimeout(() => { document.getElementById('loadingScreen').classList.add('hidden'); }, 500);
+        }
+
+        // ANIMASI PARTIKEL
+        const cvs = document.getElementById('particles-canvas');
+        const cCtx = cvs.getContext('2d');
+        let particles = [], animId;
+        function resizeCvs() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; }
+        window.addEventListener('resize', resizeCvs); resizeCvs();
+        class Particle {
+            constructor() { this.x=Math.random()*cvs.width; this.y=Math.random()*cvs.height; this.vx=(Math.random()-0.5)*0.5; this.vy=(Math.random()-0.5)*0.5; this.radius=Math.random()*2+1; }
+            update() { this.x+=this.vx; this.y+=this.vy; if(this.x<0||this.x>cvs.width) this.vx*=-1; if(this.y<0||this.y>cvs.height) this.vy*=-1; }
+            draw() { cCtx.beginPath(); cCtx.arc(this.x, this.y, this.radius, 0, Math.PI*2); cCtx.fillStyle='rgba(255,255,255,0.5)'; cCtx.fill(); }
+        }
+        function startParticles() {
+            cvs.classList.remove('hidden'); particles = [];
+            for(let i=0; i<70; i++) particles.push(new Particle());
+            function anim() {
+                cCtx.clearRect(0,0,cvs.width,cvs.height); particles.forEach(p=>{ p.update(); p.draw(); });
+                for(let i=0;i<particles.length;i++){
+                    for(let j=i+1;j<particles.length;j++){
+                        let dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y, dist=Math.sqrt(dx*dx+dy*dy);
+                        if(dist<120){ cCtx.beginPath(); cCtx.moveTo(particles[i].x,particles[i].y); cCtx.lineTo(particles[j].x,particles[j].y); cCtx.strokeStyle=`rgba(255,255,255,${0.3*(1-dist/120)})`; cCtx.lineWidth=0.5; cCtx.stroke(); }
+                    }
+                }
+                animId = requestAnimationFrame(anim);
+            }
+            if(animId) cancelAnimationFrame(animId); anim();
+        }
+        function stopParticles() { cvs.classList.add('hidden'); if(animId) cancelAnimationFrame(animId); }
+
+        // KANVAS TTD
+        const pad = document.getElementById('pad'); const ctx = pad.getContext('2d'); let isD = false;
+        
+        window.onload = () => { 
+            let r = sessionStorage.getItem('role'); 
+            if(r) { setupDash(r); } else { switchView('form'); fetchMasterKegiatanForForm(); } 
+        };
+        
+        function getCanvasPos(e) { let rect = pad.getBoundingClientRect(); return { x: (e.clientX - rect.left) * (pad.width / rect.width), y: (e.clientY - rect.top) * (pad.height / rect.height) }; }
+        pad.addEventListener('mousedown', e => { isD=true; draw(e); }); 
+        pad.addEventListener('mouseup', () => { isD=false; ctx.beginPath();}); 
+        pad.addEventListener('mousemove', draw);
+        function draw(e) { if(!isD) return; let pos = getCanvasPos(e); ctx.lineWidth=2; ctx.lineCap='round'; ctx.lineTo(pos.x, pos.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(pos.x, pos.y); }
+
+        function loadKab(idP, idK) {
+            let p = document.getElementById(idP).value, sel = document.getElementById(idK);
+            sel.innerHTML = '<option value="">Pilih Kab/Kota</option>';
+            if(p && wil[p]) wil[p].forEach(k => sel.innerHTML += `<option value="${k}">${k}</option>`);
+        }
+
+        // TAMPILAN VIEW
+        function switchView(v) {
+            document.getElementById('view-nav').classList.add('hidden'); document.getElementById('view-form').classList.add('hidden');
+            document.getElementById('view-login').classList.add('hidden'); document.getElementById('view-dash').classList.add('hidden');
+            document.getElementById('appBody').className = (v==='login')?'bg-login':'bg-dashboard';
+            
+            if(v==='login') { startParticles(); document.getElementById('view-login').classList.remove('hidden'); } else { stopParticles(); }
+            if(v==='form') { 
+                document.getElementById('view-nav').classList.remove('hidden'); 
+                document.getElementById('view-form').classList.remove('hidden'); 
+                // Sembunyikan tombol login jika sedang mengedit (sudah login)
+                if(sessionStorage.getItem('role')) document.getElementById('btnNavLogin').classList.add('hidden');
+                else document.getElementById('btnNavLogin').classList.remove('hidden');
+            }
+            if(v==='dash') { document.getElementById('view-dash').classList.remove('hidden'); }
+        }
+
+        function toggleForm() {
+            let isP = document.getElementById('rPanitia').checked;
+            isP ? document.getElementById('wrapSurat').classList.remove('hidden') : document.getElementById('wrapSurat').classList.add('hidden');
+        }
+
+        function postApi(bodyData) { return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(bodyData) }).then(r => r.json()); }
+
+        // Fetch Kegiatan untuk form publik
+        function fetchMasterKegiatanForForm() {
+            postApi({ action: 'getData' }).then(r => {
+                let sel = document.getElementById('fNamaKeg'); sel.innerHTML = '<option value="">Pilih Nama Kegiatan</option>';
+                if(r.kegiatan && r.kegiatan.length > 1) {
+                    for(let i=1; i<r.kegiatan.length; i++) { sel.innerHTML += `<option value="${r.kegiatan[i][1]}">${r.kegiatan[i][1]}</option>`; }
+                }
+            });
+        }
+
+        // SUBMIT FORM BIODATA
+        function submitForm(e) {
+            e.preventDefault();
+            let isPanitia = document.getElementById('rPanitia').checked;
+            let fd = {
+                namaKeg: document.getElementById('fNamaKeg').value,
+                noSurat: document.getElementById('fSurat').value, nama: document.getElementById('fNama').value, nip: document.getElementById('fNip').value,
+                jabatan: document.getElementById('fJabatan').value, golongan: document.getElementById('fGol').value, tempatLahir: document.getElementById('fTptLahir').value,
+                tglLahir: document.getElementById('fTglLahir').value, instansi: document.getElementById('fInstansi').value, jalanRumah: document.getElementById('fJalanR').value, provRumah: document.getElementById('fProvR').value, kabRumah: document.getElementById('fKabR').value, jalanInstansi: document.getElementById('fJalanI').value, provInstansi: document.getElementById('fProvI').value, kabInstansi: document.getElementById('fKabI').value, pendidikan: document.getElementById('fPend').value, hp: document.getElementById('fHp').value, email: document.getElementById('fEmail').value, npwp: document.getElementById('fNpwp').value, tempatKegiatan: document.getElementById('fTptKeg').value, tglKegiatan: document.getElementById('fTglKeg').value, ttd: pad.toDataURL()
+            };
+
+            let rowEdit = document.getElementById('editRowData').value;
+            showLoad("Menyimpan Biodata...");
+            postApi({ action: 'simpanBiodata', jenis: isPanitia ? 'Panitia' : 'Peserta', formData: fd, row: rowEdit ? parseInt(rowEdit) : null })
+            .then(r => {
+                hideLoad(); alert(r.message); document.getElementById('bioForm').reset(); ctx.clearRect(0,0,pad.width,pad.height);
+                if(rowEdit) batalEdit(); 
+            }).catch(() => { hideLoad(); alert("Gagal koneksi server."); });
+        }
+
+        // LOGIN SYSTEM
+        function doLogin(e) {
+            e.preventDefault(); showLoad("Memeriksa Akun...");
+            postApi({ action: 'login', username: document.getElementById('logUser').value, password: document.getElementById('logPass').value })
+            .then(r => { hideLoad(); if(r.success) { sessionStorage.setItem('role', r.role); setupDash(r.role); } else alert(r.message); })
+            .catch(err => { hideLoad(); alert("Gagal terhubung API."); });
+        }
+        
+        function setupDash(role) {
+            gRole = role; document.getElementById('lblRole').innerText = 'Role: ' + role;
+            if(role.toLowerCase() === 'panitia') { document.getElementById('menuUserLi').classList.add('hidden'); document.getElementById('menuKegiatanLi').classList.add('hidden'); } 
+            else { document.getElementById('menuUserLi').classList.remove('hidden'); document.getElementById('menuKegiatanLi').classList.remove('hidden'); }
+            switchView('dash'); showMenu('data'); loadPengaturan();
+        }
+        function doLogout() { sessionStorage.clear(); switchView('login'); }
+        function showMenu(m) {
+            ['menu-data','menu-kegiatan','menu-users','menu-pengaturan'].forEach(x => document.getElementById(x).classList.add('hidden'));
+            document.getElementById('menu-'+m).classList.remove('hidden');
+            if(m==='data') fetchAllData(); if(m==='kegiatan') fetchAllData(); if(m==='users') loadUsers();
+        }
+
+        // --- SISTEM MASTER DATA & TABS ---
+        function fetchAllData() {
+            showLoad("Memuat Master Data...");
+            postApi({ action: 'getData' }).then(r => {
+                hideLoad(); gDataAll = r; renderEventCards(); renderTableKegiatan();
+                let sel = document.getElementById('fNamaKeg'); sel.innerHTML = '<option value="">Pilih Nama Kegiatan</option>';
+                if(r.kegiatan && r.kegiatan.length > 1) { for(let i=1; i<r.kegiatan.length; i++) sel.innerHTML += `<option value="${r.kegiatan[i][1]}">${r.kegiatan[i][1]}</option>`; }
+            });
+        }
+
+        function renderEventCards() {
+            document.getElementById('view-event-list').classList.remove('hidden');
+            document.getElementById('view-event-detail').classList.add('hidden');
+            let div = document.getElementById('eventCards'); div.innerHTML = '';
+            
+            div.innerHTML += `<div class="event-card" onclick="openEvent('Semua Data')"><h3 style="color:#0ea5e9;">Semua Data Peserta/Panitia</h3><p style="font-size:12px; color:#6b7280; margin-top:5px;">Melihat seluruh pendaftar tanpa filter.</p></div>`;
+            
+            if(gDataAll.kegiatan && gDataAll.kegiatan.length > 1) {
+                for(let i=1; i<gDataAll.kegiatan.length; i++) {
+                    let k = gDataAll.kegiatan[i];
+                    let tM = k[2] ? new Date(k[2]).toLocaleDateString('id-ID') : '-';
+                    let tS = k[3] ? new Date(k[3]).toLocaleDateString('id-ID') : '-';
+                    div.innerHTML += `<div class="event-card" onclick="openEvent('${k[1]}')"><h3 style="color:#374151;">${k[1]}</h3><p style="font-size:12px; color:#6b7280; margin-top:5px;">${tM} s/d ${tS}</p></div>`;
+                }
+            }
+        }
+
+        function openEvent(eventName) {
+            currentEvent = eventName;
+            document.getElementById('view-event-list').classList.add('hidden');
+            document.getElementById('view-event-detail').classList.remove('hidden');
+            document.getElementById('detailTitle').innerText = "Data: " + eventName;
+            document.getElementById('searchData').value = '';
+            
+            // Set default tab ke Peserta saat membuka event
+            switchDataTab('Peserta');
+        }
+
+        // FUNGSI GANTI TAB PESERTA / PANITIA DI DALAM DETAIL EVENT
+        function switchDataTab(tab) {
+            currentDataTab = tab;
+            document.getElementById('btnTabPeserta').className = (tab === 'Peserta') ? 'btn btn-blue' : 'btn btn-gray';
+            document.getElementById('btnTabPanitia').className = (tab === 'Panitia') ? 'btn btn-blue' : 'btn btn-gray';
+            
+            renderTableData();
+        }
+
+        function renderTableData() {
+            let h = '<table><thead><tr><th>Nama Lengkap</th><th>NIP</th><th>Instansi</th><th>Aksi</th></tr></thead><tbody id="dataTbody">';
+            let dataList = (currentDataTab === 'Peserta') ? gDataAll.peserta : gDataAll.panitia;
+            
+            if(dataList && dataList.length > 1) {
+                let hasData = false;
+                for(let i=1; i<dataList.length; i++) {
+                    let p = dataList[i];
+                    if(currentEvent === 'Semua Data' || p[2] === currentEvent) {
+                        hasData = true;
+                        h += `<tr class="data-row"><td>${p[4]}</td><td>${p[5]}</td><td>${p[10]}</td>
+                        <td>
+                            <button class="btn btn-green" style="padding:4px; font-size:11px;" onclick="preview(${i}, '${currentDataTab}')">Print</button> 
+                            <button class="btn btn-blue" style="padding:4px; font-size:11px;" onclick="editData(${i}, '${currentDataTab}')">Edit</button> 
+                            <button class="btn btn-red" style="padding:4px; font-size:11px;" onclick="hapusData(${i+1}, '${currentDataTab}')">Hapus</button>
+                        </td></tr>`;
+                    }
+                }
+                if(!hasData) h += `<tr><td colspan="4" style="text-align:center;">Belum ada data ${currentDataTab} pada kegiatan ini.</td></tr>`;
+            } else {
+                h += `<tr><td colspan="4" style="text-align:center;">Belum ada data ${currentDataTab} sama sekali.</td></tr>`;
+            }
+            h += '</tbody></table>';
+            document.getElementById('tableData').innerHTML = h;
+            filterTabelData(); // Re-apply search filter
+        }
+
+        function backToEvents() { document.getElementById('view-event-detail').classList.add('hidden'); document.getElementById('view-event-list').classList.remove('hidden'); }
+
+        // Fitur Pencarian Dinamis
+        function filterTabelData() {
+            let kw = document.getElementById('searchData').value.toLowerCase();
+            let rows = document.querySelectorAll('#dataTbody .data-row');
+            rows.forEach(r => { r.style.display = r.innerText.toLowerCase().includes(kw) ? '' : 'none'; });
+        }
+
+        // CRUD PESERTA & PANITIA
+        function hapusData(rNum, jenis) { if(confirm('Hapus data ini?')) { showLoad("Menghapus Data..."); postApi({action:'deleteData', jenis:jenis, row:rNum}).then(r=>{hideLoad(); alert(r.message); fetchAllData(); setTimeout(()=>openEvent(currentEvent), 1000); }); } }
+        
+        function editData(idx, jenis) {
+            let d = jenis === 'Peserta' ? gDataAll.peserta[idx] : gDataAll.panitia[idx];
+            document.getElementById('editRowData').value = idx + 1;
+            document.getElementById('rPanitia').checked = (jenis === 'Panitia'); document.getElementById('rPeserta').checked = (jenis === 'Peserta'); toggleForm();
+            
+            document.getElementById('fNamaKeg').value = d[2];
+            document.getElementById('fSurat').value = d[3] !== '-' ? d[3] : ''; document.getElementById('fNama').value = d[4]; document.getElementById('fNip').value = d[5];
+            document.getElementById('fJabatan').value = d[6]; document.getElementById('fGol').value = d[7]; document.getElementById('fTptLahir').value = d[8]; 
+            if(d[9]) document.getElementById('fTglLahir').value = new Date(d[9]).toISOString().split('T')[0];
+            document.getElementById('fInstansi').value = d[10]; document.getElementById('fJalanR').value = d[11]; document.getElementById('fProvR').value = d[12]; loadKab('fProvR','fKabR'); setTimeout(()=> document.getElementById('fKabR').value = d[13], 100);
+            document.getElementById('fJalanI').value = d[14]; document.getElementById('fProvI').value = d[15]; loadKab('fProvI','fKabI'); setTimeout(()=> document.getElementById('fKabI').value = d[16], 100);
+            document.getElementById('fPend').value = d[17]; document.getElementById('fNpwp').value = d[18]; document.getElementById('fHp').value = d[19]; document.getElementById('fEmail').value = d[20]; document.getElementById('fTptKeg').value = d[21];
+            if(d[22]) document.getElementById('fTglKeg').value = new Date(d[22]).toISOString().split('T')[0];
+            
+            document.getElementById('btnKirim').innerText = 'UPDATE DATA'; document.getElementById('btnBatalEdit').classList.remove('hidden'); switchView('form');
+        }
+        function batalEdit() { document.getElementById('bioForm').reset(); document.getElementById('editRowData').value = ''; ctx.clearRect(0,0,pad.width,pad.height); document.getElementById('btnKirim').innerText = 'KIRIM BIODATA'; document.getElementById('btnBatalEdit').classList.add('hidden'); switchView('dash'); openEvent(currentEvent); }
+
+        // CRUD KEGIATAN
+        function renderTableKegiatan() {
+            let h = '<table><tr><th>Nama Kegiatan</th><th>Periode</th><th>Status Footnote</th><th>Aksi</th></tr>';
+            if(gDataAll.kegiatan && gDataAll.kegiatan.length > 1) {
+                for(let i=1; i<gDataAll.kegiatan.length; i++) {
+                    let k = gDataAll.kegiatan[i]; let tm = k[2]?new Date(k[2]).toLocaleDateString('id-ID'):'-'; let ts = k[3]?new Date(k[3]).toLocaleDateString('id-ID'):'-';
+                    h += `<tr><td>${k[1]}</td><td>${tm} - ${ts}</td><td>${k[4] ? '<span style="color:green; font-weight:bold;">Aktif</span>':'Mati'}</td>
+                    <td><button class="btn btn-blue" style="padding:4px; font-size:11px;" onclick="editKeg(${i})">Edit</button> <button class="btn btn-red" style="padding:4px; font-size:11px;" onclick="hapusKeg(${i+1})">Hapus</button></td></tr>`;
+                }
+            } else { h += '<tr><td colspan="4">Belum ada kegiatan</td></tr>'; }
+            document.getElementById('tableKegiatan').innerHTML = h+'</table>';
+        }
+        function simpanKeg() {
+            let n = document.getElementById('kNama').value, m = document.getElementById('kMulai').value, s = document.getElementById('kSelesai').value, c = document.getElementById('kFootnote').checked, r = document.getElementById('kEditRow').value;
+            if(!n) return alert("Isi nama kegiatan"); showLoad("Simpan Kegiatan..."); postApi({action:'saveKegiatan', kegiatan:{nama:n, mulai:m, selesai:s, isFootnote:c}, row: r?parseInt(r):null}).then(res=>{hideLoad(); alert(res.message); batalEditKeg(); fetchAllData();});
+        }
+        function editKeg(idx) { let k = gDataAll.kegiatan[idx]; document.getElementById('kNama').value=k[1]; if(k[2]) document.getElementById('kMulai').value=new Date(k[2]).toISOString().split('T')[0]; if(k[3]) document.getElementById('kSelesai').value=new Date(k[3]).toISOString().split('T')[0]; document.getElementById('kFootnote').checked=k[4]; document.getElementById('kEditRow').value=idx+1; document.getElementById('kBatal').classList.remove('hidden'); }
+        function batalEditKeg() { document.getElementById('kNama').value=''; document.getElementById('kMulai').value=''; document.getElementById('kSelesai').value=''; document.getElementById('kFootnote').checked=false; document.getElementById('kEditRow').value=''; document.getElementById('kBatal').classList.add('hidden'); }
+        function hapusKeg(rNum) { if(confirm('Hapus kegiatan?')) { showLoad("Menghapus..."); postApi({action:'deleteKegiatan', row:rNum}).then(r=>{hideLoad(); fetchAllData();}); } }
+
+        // KELOLA USER
+        function loadUsers() {
+            postApi({action:'getUsers'}).then(r => {
+                gUsers = r.users; let h = '<table><tr><th>Username</th><th>Role</th><th>Aksi</th></tr>';
+                for(let i=1; i<gUsers.length; i++) { 
+                    let btnAction = gUsers[i][3] === 'Permanent' ? '<span style="color:#9ca3af; font-size:12px;">Akun Permanen</span>' : 
+                    `<button class="btn btn-blue" style="padding:4px; font-size:11px;" onclick="editUser(${i})">Edit</button> <button class="btn btn-red" style="padding:4px; font-size:11px;" onclick="hapusUser(${i+1})">Hapus</button>`;
+                    h += `<tr><td>${gUsers[i][0]}</td><td>${gUsers[i][2]}</td><td>${btnAction}</td></tr>`; 
+                }
+                document.getElementById('tableUsers').innerHTML = h+'</table>';
+            });
+        }
+        function simpanUser() { let u = document.getElementById('uName').value, p = document.getElementById('uPass').value, ro = document.getElementById('uRole').value, row = document.getElementById('uEditRow').value; if(!u||!p) return alert("Isi Username & Password"); showLoad("Simpan User..."); postApi({action:'saveUser', user:{username:u, password:p, role:ro}, row: row ? parseInt(row) : null}).then(r=>{hideLoad(); alert(r.message); batalEditUser(); loadUsers();}); }
+        function editUser(idx) { document.getElementById('uName').value = gUsers[idx][0]; document.getElementById('uPass').value = gUsers[idx][1]; document.getElementById('uRole').value = gUsers[idx][2]; document.getElementById('uEditRow').value = idx + 1; document.getElementById('uBatal').classList.remove('hidden'); }
+        function batalEditUser() { document.getElementById('uName').value=''; document.getElementById('uPass').value=''; document.getElementById('uEditRow').value=''; document.getElementById('uBatal').classList.add('hidden'); }
+        function hapusUser(rNum) { if(confirm('Hapus User?')) { showLoad("Menghapus..."); postApi({action:'deleteUser', row:rNum}).then(r=>{hideLoad(); alert(r.message); loadUsers();}); } }
+
+        // MENGUNGGAH KOP DENGAN KUALITAS TINGGI
+        document.getElementById('pImgFile').addEventListener('change', function(e) {
+            let file = e.target.files[0]; if (!file) return; let reader = new FileReader();
+            reader.onload = function(event) {
+                let img = new Image(); img.onload = function() {
+                    let canvas = document.createElement('canvas'); let ctx = canvas.getContext('2d'); let maxW = 1000; 
+                    let scale = maxW / img.width; if(scale > 1) scale = 1;
+                    canvas.width = img.width * scale; canvas.height = img.height * scale; ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    let base64 = canvas.toDataURL('image/jpeg', 0.85); document.getElementById('pImg64').value = base64; document.getElementById('imgStatus').innerText = "Gambar kualitas tinggi siap disimpan!";
+                }
+                img.src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        });
+
+        function loadPengaturan() {
+            postApi({action:'getPengaturan'}).then(r => {
+                if(r.success && r.pengaturan.length) {
+                    gSet = r.pengaturan; document.getElementById('pTxt').value=gSet[0]||''; document.getElementById('pImg64').value=gSet[1]||'';
+                    if(gSet[1]) document.getElementById('imgStatus').innerText = "Gambar kop tersimpan.";
+                    document.getElementById('pFont').value=gSet[2]||'Arial'; document.getElementById('pSize').value=gSet[3]||'12';
+                    document.getElementById('pBold').checked=gSet[4]||false; document.getElementById('pItalic').checked=gSet[5]||false;
+                    document.getElementById('pMargin').value=gSet[6]||'2cm'; document.getElementById('pKertas').value=gSet[7]||'A4';
+                    document.getElementById('pJarak1').value=gSet[8]||20; document.getElementById('pJarak2').value=gSet[9]||20;
+                    document.getElementById('pFoot').value=gSet[10]||''; document.getElementById('pSpasi').value=gSet[11]||'1.15';
+                }
+            });
+        }
+        function simpanPengaturan() {
+            let p = { kopText:document.getElementById('pTxt').value, kopBase64:document.getElementById('pImg64').value, font:document.getElementById('pFont').value, ukuran:document.getElementById('pSize').value, bold:document.getElementById('pBold').checked, italic:document.getElementById('pItalic').checked, margin:document.getElementById('pMargin').value, kertas:document.getElementById('pKertas').value, jarakKop:document.getElementById('pJarak1').value, jarakJudul:document.getElementById('pJarak2').value, footnote:document.getElementById('pFoot').value, jarakParagraf:document.getElementById('pSpasi').value };
+            showLoad("Menyimpan Pengaturan..."); postApi({action:'savePengaturan', pengaturan:p}).then(r=>{hideLoad(); alert(r.message); loadPengaturan();});
+        }
+
+        // --- SISTEM WYSIWYG CETAK ---
+        function preview(idx, jenis) {
+            let d = jenis === 'Peserta' ? gDataAll.peserta[idx] : gDataAll.panitia[idx];
+            let pSize = gSet[7] === 'F4' ? '21.59cm 33cm' : gSet[7] === 'Letter' ? 'Letter' : gSet[7] === 'Legal' ? 'Legal' : 'A4';
+            let paperW = gSet[7] === 'F4' ? '215.9mm' : gSet[7] === 'Letter' ? '215.9mm' : gSet[7] === 'Legal' ? '215.9mm' : '210mm';
+            let paperH = gSet[7] === 'F4' ? '330mm' : gSet[7] === 'Letter' ? '279.4mm' : gSet[7] === 'Legal' ? '355.6mm' : '297mm';
+            let spasi = gSet[11] || '1.15';
+            
+            // Logika Otomatis Footnote Kegiatan
+            let finalFootnote = gSet[10] || '';
+            let kData = gDataAll.kegiatan.find(x => x[1] === d[2]); 
+            if (kData && kData[4] === true) {
+                let dMulai = kData[2] ? new Date(kData[2]).toLocaleDateString('id-ID') : '';
+                let dSelesai = kData[3] ? new Date(kData[3]).toLocaleDateString('id-ID') : '';
+                finalFootnote = `${kData[1]} (${dMulai} s.d ${dSelesai})`;
+            }
+            
+            let hKop = gSet[1] ? `<div style="text-align:center; width:100%;"><img src="${gSet[1]}" style="width:100%; height:auto;"></div>` : `<div style="text-align:center; width:100%; font-size:16pt; font-weight:bold; text-transform:uppercase;">${gSet[0]||''}</div>`;
+            
+            let hTabel = `<table style="width:100%; border:none; border-collapse: collapse; margin-top:${gSet[9]}px; line-height:${spasi};">`;
+            
+            // Masukkan Nomor Surat Tugas KHUSUS PANITIA
+            let rowP = [];
+            if (jenis === 'Panitia') { rowP.push(['Nomor Surat Tugas', d[3]]); }
+            
+            rowP.push(
+                ['Nama Lengkap', d[4]], ['NIP', d[5]], ['Jabatan', d[6]], ['Pangkat / Golongan', d[7]], 
+                ['Tempat, Tgl Lahir', `${d[8]}, ${d[9]?new Date(d[9]).toLocaleDateString('id-ID'):''}`], 
+                ['Instansi', d[10]], ['Alamat Rumah', `${d[11]}, ${d[13]}, ${d[12]}`], 
+                ['Alamat Instansi', `${d[14]}, ${d[16]}, ${d[15]}`], ['Pendidikan Terakhir', d[17]], 
+                ['NPWP', d[18]], ['No HP', d[19]], ['Email', d[20]]
+            );
+            rowP.forEach(item => { hTabel += `<tr><td style="border:none; width:35%; padding:4px 0; vertical-align:top;">${item[0]}</td><td style="border:none; width:2%; vertical-align:top;">:</td><td style="border:none; padding:4px 0;">${item[1]}</td></tr>`; });
+            hTabel += `</table>`;
+
+            // SPACER FLEKSIBEL (Pendorong agar TTD dipaksa jatuh ke ujung bawah dokumen)
+            let spacer = `<div style="flex-grow: 1; min-height: 80px;"></div>`;
+
+            // TTD DI KANAN BAWAH (SPASI RAPAT 1.2, TANPA GARIS BAWAH)
+            let tglKeg = d[22] ? new Date(d[22]).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) : '';
+            let ttdBase64 = d[23] || ''; 
+            
+            let hTtd = `<div style="align-self:flex-end; width:280px; text-align:center; line-height:1.2;">
+                    <p style="margin:0;">${d[21]}, ${tglKeg}</p>
+                    <div style="display:flex; justify-content:center; align-items:center; height:100px; margin:5px 0;">
+                        ${ttdBase64 ? `<img src="${ttdBase64}" style="max-height:100%; max-width:100%; object-fit:contain;">` : ''}
+                    </div>
+                    <p style="font-weight:bold; margin:0;">${d[4]}</p>
+                    <p style="margin:0;">NIP. ${d[5]}</p>
+            </div>`;
+
+            let htmlDoc = `
+            <!DOCTYPE html>
+            <html lang="id">
+            <head>
+                <style>
+                    @page { size: ${pSize} portrait; margin: 0; }
+                    body { margin: 0; padding: 0; background: #525659; display: flex; justify-content: center; align-items: flex-start; }
+                    .paper { background: white; width: ${paperW}; min-height: ${paperH}; padding: ${gSet[6] || '2cm'}; box-sizing: border-box; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin: 20px 0; font-family: '${gSet[2]}', sans-serif; font-size: ${gSet[3]}pt; ${gSet[4] ? 'font-weight:bold;' : ''} ${gSet[5] ? 'font-style:italic;' : ''} display: flex; flex-direction: column; }
+                    @media print { body { background: white; margin: 0; padding: 0; } .paper { width: 100%; min-height: 100%; margin: 0; padding: ${gSet[6] || '2cm'}; box-shadow: none; border: none; } }
+                </style>
+            </head>
+            <body>
+                <div class="paper">
+                    ${hKop}
+                    <div style="margin-top:${gSet[8]}px; text-align:center; font-size:14pt; font-weight:bold; text-decoration:underline;">BIODATA ${jenis.toUpperCase()}</div>
+                    ${hTabel}
+                    ${spacer}
+                    ${hTtd}
+                    <div style="margin-top:15px; font-size:9pt; padding-top:5px;">${finalFootnote}</div>
+                </div>
+            </body>
+            </html>
+            `;
+
+            let iframe = document.getElementById('previewFrame'); let doc = iframe.contentWindow.document; doc.open(); doc.write(htmlDoc); doc.close();
+            document.getElementById('modalCetak').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
